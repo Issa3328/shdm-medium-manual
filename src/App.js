@@ -2,24 +2,24 @@ import { useState, useEffect, useRef } from "react";
 
 const SUPABASE_URL      = "https://iljzwxwopxuzpgkjivmn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KEoCJtCLyGTJjqB1phGy2Q_v3PftUYH";
-const S_SESSION = "shdm_low_manual_session_id";
-const FLOW      = "low_manual";
+const S_SESSION = "shdm_medium_manual_session_id";
+const FLOW      = "medium_manual";
 
-const ACQ_CATS = [
-  { id: "sensors",   label: "Home Sensors" },
-  { id: "behavior",  label: "Behavior Patterns" },
-  { id: "purchases", label: "Purchase History" },
+const COLLECTION_CATS = [
+  { id: "homeSensors",      icon: "🏠", label: "Home Sensors",      subs: ["Kitchen Sensors", "Climate Sensors"] },
+  { id: "behaviorPatterns", icon: "📊", label: "Behavior Patterns", subs: ["Motion Tracking", "Presence Detection"] },
+  { id: "purchaseHistory",  icon: "🛒", label: "Purchase History",  subs: [] },
 ];
-const PROC_CATS = [
-  { id: "food",     label: "Food Services" },
-  { id: "home",     label: "Home Services" },
-  { id: "wellness", label: "Wellness Services" },
+const USAGE_CATS = [
+  { id: "foodServices",     icon: "🍕", label: "Food Services",     desc: "Meal recommendations and delivery",  subs: ["Food Delivery", "Grocery Shopping"] },
+  { id: "homeServices",     icon: "🏠", label: "Home Services",     desc: "Automation and maintenance",         subs: ["Home Automation", "Maintenance"] },
+  { id: "wellnessServices", icon: "💪", label: "Wellness Services", desc: "Health and fitness support",         subs: [] },
 ];
 const OFFERS = [
-  { id: "1", emoji: "🍕", name: "Pizza Meal",     desc: "2 Large Pizzas, 2 Pops, Large Fries",    price: 24.99, original: 32.99 },
-  { id: "2", emoji: "🍔", name: "Burger Combo",   desc: "2 Burgers, 2 Fries, 2 Drinks",           price: 18.99, original: 24.99 },
-  { id: "3", emoji: "🥡", name: "Chinese Dinner", desc: "Fried Rice, Noodles, Spring Rolls",       price: 32.99, original: 38.99 },
-  { id: "4", emoji: "🍝", name: "Pasta Bowl",     desc: "Pasta, Garlic Bread, Salad",              price: 16.99, original: 21.99 },
+  { id: "1", emoji: "🍕", name: "Pizza Meal",     desc: "2 Large Pizzas, 2 Pops, Large Fries",    price: 24.99, original: 32.99, save: 8 },
+  { id: "2", emoji: "🍔", name: "Burger Combo",   desc: "2 Burgers, 2 Fries, 2 Drinks",           price: 18.99, original: 24.99, save: 6 },
+  { id: "3", emoji: "🥡", name: "Chinese Dinner", desc: "Fried Rice, Noodles, Spring Rolls",       price: 32.99, original: 38.99, save: 6 },
+  { id: "4", emoji: "🍝", name: "Pasta Bowl",     desc: "Pasta, Garlic Bread, Salad",              price: 16.99, original: 21.99, save: 5 },
 ];
 
 const TASKS = [
@@ -65,7 +65,7 @@ function createTracker(sessionId) {
     click()    { s.clicks++; },
     error()    { s.errors++; },
     override() { s.clicks++; s.overrides++; },
-    depth(d)   { if (d > s.depth) s.depth = d; },
+    expand(d)  { s.clicks++; if (d > s.depth) s.depth = d; },
     complete(offerName = null, orderPlaced = false) {
       if (!s.task) return null;
       const time_ms = Date.now() - s.start;
@@ -92,7 +92,7 @@ const CSS = `
   .task-cb { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #d1d5db; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
   .task-cb.done { background: #16a34a; border-color: #16a34a; color: #fff; }
   .task-cb.active { border-color: #4263eb; }
-  .task-lbl { font-size: 12px; font-weight: 600; color: #111827; }
+  .task-lbl { font-size: 12px; font-weight: 600; }
   .task-desc { font-size: 11px; color: #6b7280; margin-top: 2px; line-height: 1.4; }
   .content-area { flex: 1; display: flex; justify-content: center; background: #f5f6fa; }
   .main { width: 100%; max-width: 600px; padding: 24px; }
@@ -101,31 +101,67 @@ const CSS = `
   .task-banner-desc { font-size: 13px; line-height: 1.5; }
   .btn-task-done { display: block; width: 100%; margin-top: 10px; padding: 11px; background: #4f46e5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .btn-task-done:hover { background: #4338ca; }
-  .page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-  .page-sub { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
   .back { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #6b7280; cursor: pointer; margin-bottom: 16px; }
   .back:hover { color: #4263eb; }
+  .page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .page-sub { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+  .info-banner { display: flex; gap: 10px; padding: 12px 14px; border-radius: 10px; background: #eef1ff; border: 1px solid #c7d2fe; margin-bottom: 16px; }
+  .info-banner-icon { font-size: 14px; color: #4263eb; flex-shrink: 0; margin-top: 1px; }
+  .info-banner-title { font-size: 13px; font-weight: 600; color: #3451c7; }
+  .info-banner-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
   .tabs { display: flex; border-bottom: 2px solid #e4e6ef; margin-bottom: 16px; }
-  .tab { flex: 1; text-align: center; padding: 10px 8px; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 8px; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
   .tab.active { color: #4263eb; border-bottom-color: #4263eb; }
-  .cat-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: #fff; border: 1px solid #e4e6ef; border-radius: 10px; margin-bottom: 8px; }
-  .cat-label { font-size: 14px; font-weight: 500; }
-  .da { display: flex; gap: 6px; }
-  .da-btn { padding: 5px 14px; border-radius: 7px; border: 1.5px solid #e4e6ef; background: #fff; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; color: #6b7280; }
+  .cat-block { background: #fff; border: 1px solid #e4e6ef; border-radius: 12px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .cat-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; cursor: pointer; transition: background .12s; }
+  .cat-header:hover { background: #f5f6fa; }
+  .cat-header-left { display: flex; align-items: center; gap: 8px; }
+  .cat-icon { font-size: 16px; }
+  .cat-label { font-size: 14px; font-weight: 600; }
+  .cat-desc { font-size: 12px; color: #6b7280; margin-top: 1px; }
+  .cat-chevron { color: #9ca3af; font-size: 12px; transition: transform .15s; }
+  .cat-chevron.open { transform: rotate(180deg); }
+  .da { display: flex; gap: 6px; flex-shrink: 0; }
+  .da-btn { padding: 5px 12px; border-radius: 7px; border: 1.5px solid #e4e6ef; background: #fff; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; color: #6b7280; }
   .da-deny.on  { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
   .da-allow.on { background: #dcfce7; border-color: #86efac; color: #16a34a; }
+  .da-deny:hover:not(.on)  { background: #fee2e2; border-color: #fca5a5; }
+  .da-allow:hover:not(.on) { background: #dcfce7; border-color: #86efac; }
+  .sub-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 10px 24px; border-top: 1px solid #e4e6ef; }
+  .sub-label { font-size: 13px; color: #6b7280; }
+  .xcheck { display: flex; gap: 5px; }
+  .btn-x  { width: 26px; height: 26px; border-radius: 6px; border: 1.5px solid #fca5a5; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .btn-ck { width: 26px; height: 26px; border-radius: 6px; border: 1.5px solid #86efac; background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .btn-x.dim, .btn-ck.dim { opacity: 0.28; }
   .save-row { display: flex; justify-content: flex-end; margin: 8px 0; }
   .btn-save { padding: 9px 22px; background: #4263eb; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .btn-save.saved { background: #16a34a; }
   .btn-done { display: block; width: 100%; padding: 14px; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 8px; }
-  .off-card { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border: 1px solid #e4e6ef; border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
+  .off-tabs { display: flex; border-bottom: 2px solid #e4e6ef; margin-bottom: 16px; }
+  .off-tab { flex: 1; text-align: center; padding: 11px 8px; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .off-tab.active { color: #4263eb; border-bottom-color: #4263eb; }
+  .off-head { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .off-count { font-size: 13px; color: #6b7280; margin-bottom: 14px; }
+  .ctx-box { background: #eef1ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
+  .ctx-title { font-size: 13px; font-weight: 600; color: #3451c7; margin-bottom: 4px; }
+  .ctx-sub { font-size: 12px; color: #6b7280; }
+  .off-card { background: #fff; border: 1px solid #e4e6ef; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color .12s; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
   .off-card:hover { border-color: #4263eb; }
-  .off-name { font-size: 14px; font-weight: 500; }
-  .off-price { font-size: 15px; font-weight: 700; color: #4263eb; }
+  .off-card-row { display: flex; align-items: flex-start; gap: 12px; }
+  .off-emoji { font-size: 28px; line-height: 1; }
+  .off-body { flex: 1; }
+  .off-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .off-desc { font-size: 13px; color: #6b7280; margin-bottom: 6px; }
+  .off-save-badge { font-size: 12px; color: #16a34a; font-weight: 600; background: #dcfce7; padding: 2px 8px; border-radius: 20px; display: inline-block; }
+  .off-price-col { text-align: right; flex-shrink: 0; }
+  .off-original { font-size: 12px; color: #9ca3af; text-decoration: line-through; }
+  .off-price { font-size: 16px; font-weight: 700; color: #4263eb; }
+  .no-off { font-size: 14px; color: #6b7280; padding: 20px 0; }
   .order-card { background: #fff; border: 1px solid #e4e6ef; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
   .order-title { font-size: 17px; font-weight: 700; padding: 16px 20px; border-bottom: 1px solid #e4e6ef; }
   .order-line { display: flex; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #e4e6ef; font-size: 14px; }
   .order-line:last-child { border-bottom: none; font-weight: 700; }
+  .smart-tip { background: #eef1ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #3451c7; margin-top: 12px; }
   .btn-confirm { display: block; width: 100%; padding: 14px; background: #4263eb; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 12px; }
   .confirm-wrap { display: flex; align-items: center; justify-content: center; min-height: 50vh; }
   .confirm-box { background: #fff; border: 1px solid #e4e6ef; border-radius: 12px; padding: 40px 32px; text-align: center; max-width: 360px; width: 100%; }
@@ -140,6 +176,10 @@ const CSS = `
   .stat-lbl { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
   .stat-val { font-size: 20px; font-weight: 700; }
 `;
+
+function Wrap({ children }) {
+  return <div className="content-area"><div className="main">{children}</div></div>;
+}
 
 function TaskSidebar({ completed, active, onSelect }) {
   return (
@@ -175,11 +215,25 @@ function TaskBanner({ task, onComplete }) {
   );
 }
 
-function Wrap({ children }) {
-  return <div className="content-area"><div className="main">{children}</div></div>;
+function DA({ value, onDeny, onAllow }) {
+  return (
+    <div className="da">
+      <button className={`da-btn da-deny${value === "deny" ? " on" : ""}`} onClick={onDeny}>Deny</button>
+      <button className={`da-btn da-allow${value === "allow" ? " on" : ""}`} onClick={onAllow}>Allow</button>
+    </div>
+  );
 }
 
-function HomeScreen({ onConsent, activeTask, onTaskComplete, sessionId, tracker }) {
+function XCheck({ value, onDeny, onAllow }) {
+  return (
+    <div className="xcheck">
+      <button className={`btn-x${value === "deny" ? "" : " dim"}`} onClick={onDeny}>✕</button>
+      <button className={`btn-ck${value === "allow" ? "" : " dim"}`} onClick={onAllow}>✓</button>
+    </div>
+  );
+}
+
+function HomeScreen({ onPrivacy, activeTask, onTaskComplete, sessionId, tracker }) {
   useEffect(() => {
     const t0 = Date.now();
     logEvent({ session_id: sessionId, flow: FLOW, event_type: "page_enter", page: "home", client_timestamp: new Date().toISOString() });
@@ -199,7 +253,7 @@ function HomeScreen({ onConsent, activeTask, onTaskComplete, sessionId, tracker 
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 3 }}>Your Smart Home</div>
           <div style={{ fontSize: 13, color: "#6b7280" }}>Manage your home automation and privacy settings</div>
         </div>
-        <div className="home-card-row" onClick={() => { tracker.click(); logEvent({ session_id: sessionId, flow: FLOW, event_type: "click", element: "privacy_settings", page: "home", client_timestamp: new Date().toISOString() }); onConsent(); }}>
+        <div className="home-card-row" onClick={() => { tracker.click(); logEvent({ session_id: sessionId, flow: FLOW, event_type: "click", element: "privacy_settings", page: "home", client_timestamp: new Date().toISOString() }); onPrivacy(); }}>
           <span>Privacy Settings</span><span style={{ color: "#9ca3af" }}>→</span>
         </div>
       </div>
@@ -211,26 +265,32 @@ function HomeScreen({ onConsent, activeTask, onTaskComplete, sessionId, tracker 
   );
 }
 
-function ConsentScreen({ acq, setAcq, proc, setProc, onBack, onDone, activeTask, onTaskComplete, sessionId, tracker, saved, setSaved }) {
+function PrivacyScreen({ catVal, setCatVal, subVal, setSubVal, usgVal, setUsgVal, usgSub, setUsgSub, onBack, onDone, activeTask, onTaskComplete, sessionId, tracker, saved, setSaved }) {
   useEffect(() => {
     const t0 = Date.now();
     logEvent({ session_id: sessionId, flow: FLOW, event_type: "page_enter", page: "privacy_settings", task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
     return () => logEvent({ session_id: sessionId, flow: FLOW, event_type: "page_exit", page: "privacy_settings", time_on_page_ms: Date.now() - t0, task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [tab, setTab] = useState(activeTask?.id === "task3" ? "usage" : "collection");
+  const [tab,      setTab]      = useState(activeTask?.id === "task3" ? "usage" : "collection");
+  const [expanded, setExpanded] = useState({});
 
-  function toggleAcq(id, val) {
-    const prev = acq[id]; const next = prev === val ? null : val;
+  function toggleCat(id, val, state, setState) {
+    const prev = state[id]; const next = prev === val ? null : val;
     if (prev !== null && prev !== next && next !== null) tracker.override(); else tracker.click();
-    setAcq(a => ({ ...a, [id]: next })); setSaved(false);
+    setState(s => ({ ...s, [id]: next })); setSaved(false);
     logEvent({ session_id: sessionId, flow: FLOW, event_type: prev !== null && next !== null ? "override" : "toggle", item: id, value: next, task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
   }
-  function toggleProc(id, val) {
-    const prev = proc[id]; const next = prev === val ? null : val;
+  function toggleSub(key, val, state, setState) {
+    const prev = state[key]; const next = prev === val ? null : val;
     if (prev !== null && prev !== next && next !== null) tracker.override(); else tracker.click();
-    setProc(p => ({ ...p, [id]: next })); setSaved(false);
-    logEvent({ session_id: sessionId, flow: FLOW, event_type: prev !== null && next !== null ? "override" : "toggle", item: id, value: next, task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
+    setState(s => ({ ...s, [key]: next })); setSaved(false);
+    logEvent({ session_id: sessionId, flow: FLOW, event_type: prev !== null && next !== null ? "override" : "toggle", item: key, value: next, task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
+  }
+  function expand(key, depth) {
+    tracker.expand(depth);
+    setExpanded(e => ({ ...e, [key]: !e[key] }));
+    logEvent({ session_id: sessionId, flow: FLOW, event_type: "expand", item: key, value: depth, task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
   }
   function switchTab(t) {
     if (activeTask?.id === "task2" && t === "usage")      { tracker.error(); logEvent({ session_id: sessionId, flow: FLOW, event_type: "error", element: "tab_switch_wrong", value: t, task: activeTask?.id, client_timestamp: new Date().toISOString() }); }
@@ -250,33 +310,77 @@ function ConsentScreen({ acq, setAcq, proc, setProc, onBack, onDone, activeTask,
       <div className="back" onClick={() => { tracker.click(); onBack(); }}>← Back to Home</div>
       <div className="page-title">Privacy Settings</div>
       <div className="page-sub">Control what data is collected and how it's used</div>
-      <div className="tabs">
-        <div className={`tab${tab === "collection" ? " active" : ""}`} onClick={() => switchTab("collection")}>Data Collection</div>
-        <div className={`tab${tab === "usage" ? " active" : ""}`} onClick={() => switchTab("usage")}>Data Usage</div>
+      <div className="info-banner">
+        <span className="info-banner-icon">ℹ️</span>
+        <div>
+          <div className="info-banner-title">Manage Your Privacy</div>
+          <div className="info-banner-sub">Expand categories to control specific data types.</div>
+        </div>
       </div>
+      <div className="tabs">
+        <div className={`tab${tab === "collection" ? " active" : ""}`} onClick={() => switchTab("collection")}>🗄️ Data Collection</div>
+        <div className={`tab${tab === "usage" ? " active" : ""}`} onClick={() => switchTab("usage")}>⚙️ Data Usage</div>
+      </div>
+
       {tab === "collection" && (
         <>
-          {ACQ_CATS.map(cat => (
-            <div className="cat-row" key={cat.id}>
-              <span className="cat-label">{cat.label}</span>
-              <div className="da">
-                <button className={`da-btn da-deny${acq[cat.id] === "deny" ? " on" : ""}`} onClick={() => toggleAcq(cat.id, "deny")}>Deny</button>
-                <button className={`da-btn da-allow${acq[cat.id] === "allow" ? " on" : ""}`} onClick={() => toggleAcq(cat.id, "allow")}>Allow</button>
+          {COLLECTION_CATS.map(cat => (
+            <div className="cat-block" key={cat.id}>
+              <div className="cat-header">
+                <div className="cat-header-left" onClick={() => cat.subs.length > 0 && expand(cat.id, 1)}>
+                  <span className="cat-icon">{cat.icon}</span>
+                  <span className="cat-label">{cat.label}</span>
+                  {cat.subs.length > 0 && <span className={`cat-chevron${expanded[cat.id] ? " open" : ""}`}>▾</span>}
+                </div>
+                <DA value={catVal[cat.id]}
+                  onDeny={() => toggleCat(cat.id, "deny", catVal, setCatVal)}
+                  onAllow={() => toggleCat(cat.id, "allow", catVal, setCatVal)} />
               </div>
+              {expanded[cat.id] && cat.subs.map(sub => {
+                const key = `${cat.id}_${sub}`;
+                return (
+                  <div className="sub-item" key={sub}>
+                    <span className="sub-label">{sub}</span>
+                    <XCheck value={subVal[key]}
+                      onDeny={() => toggleSub(key, "deny", subVal, setSubVal)}
+                      onAllow={() => toggleSub(key, "allow", subVal, setSubVal)} />
+                  </div>
+                );
+              })}
             </div>
           ))}
           <div className="save-row"><button className={`btn-save${saved ? " saved" : ""}`} onClick={handleSave}>{saved ? "Saved!" : "Save My Choices"}</button></div>
         </>
       )}
+
       {tab === "usage" && (
         <>
-          {PROC_CATS.map(cat => (
-            <div className="cat-row" key={cat.id}>
-              <span className="cat-label">{cat.label}</span>
-              <div className="da">
-                <button className={`da-btn da-deny${proc[cat.id] === "deny" ? " on" : ""}`} onClick={() => toggleProc(cat.id, "deny")}>Deny</button>
-                <button className={`da-btn da-allow${proc[cat.id] === "allow" ? " on" : ""}`} onClick={() => toggleProc(cat.id, "allow")}>Allow</button>
+          {USAGE_CATS.map(cat => (
+            <div className="cat-block" key={cat.id}>
+              <div className="cat-header">
+                <div className="cat-header-left" onClick={() => cat.subs.length > 0 && expand("u_" + cat.id, 1)}>
+                  <span className="cat-icon">{cat.icon}</span>
+                  <div>
+                    <div className="cat-label">{cat.label}</div>
+                    <div className="cat-desc">{cat.desc}</div>
+                  </div>
+                  {cat.subs.length > 0 && <span className={`cat-chevron${expanded["u_" + cat.id] ? " open" : ""}`}>▾</span>}
+                </div>
+                <DA value={usgVal[cat.id]}
+                  onDeny={() => toggleCat(cat.id, "deny", usgVal, setUsgVal)}
+                  onAllow={() => toggleCat(cat.id, "allow", usgVal, setUsgVal)} />
               </div>
+              {expanded["u_" + cat.id] && cat.subs.map(sub => {
+                const key = `${cat.id}_${sub}`;
+                return (
+                  <div className="sub-item" key={sub}>
+                    <span className="sub-label">{sub}</span>
+                    <XCheck value={usgSub[key]}
+                      onDeny={() => toggleSub(key, "deny", usgSub, setUsgSub)}
+                      onAllow={() => toggleSub(key, "allow", usgSub, setUsgSub)} />
+                  </div>
+                );
+              })}
             </div>
           ))}
           <div className="save-row"><button className={`btn-save${saved ? " saved" : ""}`} onClick={handleSave}>{saved ? "Saved!" : "Save My Choices"}</button></div>
@@ -308,24 +412,39 @@ function OffersScreen({ onSelect, onBack, activeTask, onTaskComplete, sessionId,
     <Wrap>
       <TaskBanner task={activeTask} onComplete={onTaskComplete} />
       <div className="back" onClick={handleBack}>← Back to Home</div>
-      <div className="tabs">
+      <div className="off-tabs">
         {["food","home","wellness"].map(t => (
-          <div key={t} className={`tab${tab === t ? " active" : ""}`} onClick={() => switchTab(t)}>{t.charAt(0).toUpperCase()+t.slice(1)}</div>
+          <div key={t} className={`off-tab${tab === t ? " active" : ""}`} onClick={() => switchTab(t)}>{t.charAt(0).toUpperCase()+t.slice(1)}</div>
         ))}
       </div>
       {tab === "food" ? (
         <>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Available Offers</div>
-          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 14 }}>{OFFERS.length} available</div>
+          <div className="off-head">Personalized Offers for You</div>
+          <div className="off-count">{OFFERS.length} available</div>
+          <div className="ctx-box">
+            <div className="ctx-title">ℹ️ Based on Your Settings</div>
+            <div className="ctx-sub">These offers match your preferences (2 people home, 7:15 PM, no cooking activity)</div>
+          </div>
           {OFFERS.map(o => (
-            <div key={o.id} className="off-card" onClick={() => { tracker.click(); logEvent({ session_id: sessionId, flow: FLOW, event_type: "click", element: "select_offer", offer: o.name, task: activeTask?.id || null, client_timestamp: new Date().toISOString() }); onSelect(o); }}>
-              <span className="off-name">{o.emoji} {o.name}</span>
-              <span className="off-price">${o.price.toFixed(2)}</span>
+            <div key={o.id} className="off-card"
+              onClick={() => { tracker.click(); logEvent({ session_id: sessionId, flow: FLOW, event_type: "click", element: "select_offer", offer: o.name, task: activeTask?.id || null, client_timestamp: new Date().toISOString() }); onSelect(o); }}>
+              <div className="off-card-row">
+                <span className="off-emoji">{o.emoji}</span>
+                <div className="off-body">
+                  <div className="off-name">{o.name}</div>
+                  <div className="off-desc">{o.desc}</div>
+                  <span className="off-save-badge">Save ${o.save}.00</span>
+                </div>
+                <div className="off-price-col">
+                  <div className="off-original">${o.original.toFixed(2)}</div>
+                  <div className="off-price">${o.price.toFixed(2)}</div>
+                </div>
+              </div>
             </div>
           ))}
         </>
       ) : (
-        <div style={{ fontSize: 14, color: "#6b7280", padding: "20px 0" }}>No offers available for this category.</div>
+        <div className="no-off">No offers available for this category.</div>
       )}
     </Wrap>
   );
@@ -348,18 +467,20 @@ function OrderScreen({ offer, onPlace, onBack, activeTask, onTaskComplete, sessi
       <TaskBanner task={activeTask} onComplete={onTaskComplete} />
       <div className="back" onClick={handleBack}>← Back to Offers</div>
       <div className="order-card">
-        <div className="order-title">Order Summary</div>
-        <div className="order-line"><span>Item</span><span>{offer.name}</span></div>
-        <div className="order-line"><span>Delivery</span><span>Standard</span></div>
+        <div className="order-title">{offer.emoji} Order Summary</div>
+        <div className="order-line"><span>Selected Item</span><span style={{ fontWeight: 600 }}>{offer.name}</span></div>
+        <div style={{ padding: "4px 20px 8px", fontSize: 12, color: "#6b7280" }}>{offer.desc}</div>
+        <div className="order-line"><span>Delivery Type</span><span>Standard (30–45 min)</span></div>
         <div className="order-line"><span>Delivery Fee</span><span>Free</span></div>
-        <div className="order-line"><span>Total</span><span>${offer.price.toFixed(2)}</span></div>
+        <div className="order-line"><span>Total</span><span style={{ color: "#4263eb" }}>${offer.price.toFixed(2)}</span></div>
       </div>
+      <div className="smart-tip">💡 <strong>Smart Tip:</strong> This offer matches your preferences and saves you ${offer.save}.00!</div>
       <button className="btn-confirm" onClick={() => {
         tracker.click(); setOrderConfirmed(true);
         logEvent({ session_id: sessionId, flow: FLOW, event_type: "click", element: "confirm_place_order", offer: offer.name, task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
         logEvent({ session_id: sessionId, flow: FLOW, event_type: "order_placed", offer: offer.name, task: activeTask?.id || null, client_timestamp: new Date().toISOString() });
         onPlace();
-      }}>Place Order</button>
+      }}>Confirm &amp; Place Order</button>
     </Wrap>
   );
 }
@@ -384,24 +505,33 @@ export default function App() {
   const sessionId = useRef(getOrCreateSessionId()).current;
   const tracker   = useRef(createTracker(sessionId)).current;
 
-  const [screen,         setScreen]         = useState("consent");
+  const [screen,         setScreen]         = useState("privacy");
   const [offer,          setOffer]          = useState(null);
   const [activeTask,     setActiveTask]     = useState(null);
   const [completed,      setCompleted]      = useState([]);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [saved,          setSaved]          = useState(false);
 
-  const [acq,  setAcq]  = useState({ sensors: null, behavior: null, purchases: null });
-  const [proc, setProc] = useState({ food: null, home: null, wellness: null });
+  // Manual: all null
+  const [catVal, setCatVal] = useState({ homeSensors: null, behaviorPatterns: null, purchaseHistory: null });
+  const [subVal, setSubVal] = useState({});
+  const [usgVal, setUsgVal] = useState({ foodServices: null, homeServices: null, wellnessServices: null });
+  const [usgSub, setUsgSub] = useState({});
 
   function startTask(task) {
     if (completed.includes(task.id)) return;
     setSaved(false);
-    if (task.id === "task2") setAcq({ sensors: "deny", behavior: "deny", purchases: "deny" });
-    if (task.id === "task3") setProc({ food: "deny", home: "deny", wellness: "deny" });
+    if (task.id === "task2") {
+      setCatVal({ homeSensors: "deny", behaviorPatterns: "deny", purchaseHistory: "deny" });
+      setSubVal({});
+    }
+    if (task.id === "task3") {
+      setUsgVal({ foodServices: "deny", homeServices: "deny", wellnessServices: "deny" });
+      setUsgSub({});
+    }
     tracker.start(task.id);
     setActiveTask(task);
-    if (["task1","task2","task3"].includes(task.id)) setScreen("consent");
+    if (["task1","task2","task3"].includes(task.id)) setScreen("privacy");
     else if (task.id === "task4") setScreen("offers");
     else if (task.id === "task5") setScreen("order");
   }
@@ -411,7 +541,7 @@ export default function App() {
     if (result?.task) setCompleted(prev => [...prev, result.task]);
     setActiveTask(null);
     setOrderConfirmed(false);
-    setScreen("consent");
+    setScreen("privacy");
   }
 
   return (
@@ -419,11 +549,11 @@ export default function App() {
       <style>{CSS}</style>
       <div className="app">
         <TaskSidebar completed={completed} active={activeTask} onSelect={startTask} />
-        {screen === "home"    && <HomeScreen    onConsent={() => setScreen("consent")} activeTask={activeTask} onTaskComplete={handleTaskComplete} sessionId={sessionId} tracker={tracker} />}
-        {screen === "consent" && <ConsentScreen acq={acq} setAcq={setAcq} proc={proc} setProc={setProc} onBack={() => setScreen("home")} onDone={() => setScreen("offers")} activeTask={activeTask} onTaskComplete={handleTaskComplete} sessionId={sessionId} tracker={tracker} saved={saved} setSaved={setSaved} />}
-        {screen === "offers"  && <OffersScreen  onSelect={o => { setOffer(o); setScreen("order"); }} onBack={() => setScreen("consent")} activeTask={activeTask} onTaskComplete={handleTaskComplete} sessionId={sessionId} tracker={tracker} />}
+        {screen === "home"    && <HomeScreen    onPrivacy={() => setScreen("privacy")} activeTask={activeTask} onTaskComplete={handleTaskComplete} sessionId={sessionId} tracker={tracker} />}
+        {screen === "privacy" && <PrivacyScreen catVal={catVal} setCatVal={setCatVal} subVal={subVal} setSubVal={setSubVal} usgVal={usgVal} setUsgVal={setUsgVal} usgSub={usgSub} setUsgSub={setUsgSub} onBack={() => setScreen("home")} onDone={() => setScreen("offers")} activeTask={activeTask} onTaskComplete={handleTaskComplete} sessionId={sessionId} tracker={tracker} saved={saved} setSaved={setSaved} />}
+        {screen === "offers"  && <OffersScreen  onSelect={o => { setOffer(o); setScreen("order"); }} onBack={() => setScreen("privacy")} activeTask={activeTask} onTaskComplete={handleTaskComplete} sessionId={sessionId} tracker={tracker} />}
         {screen === "order"   && <OrderScreen   offer={offer || OFFERS[0]} onPlace={() => setScreen("confirm")} onBack={() => setScreen("offers")} activeTask={activeTask} onTaskComplete={handleTaskComplete} sessionId={sessionId} tracker={tracker} setOrderConfirmed={setOrderConfirmed} />}
-        {screen === "confirm" && <ConfirmScreen onHome={() => setScreen("consent")} activeTask={activeTask} onTaskComplete={handleTaskComplete} />}
+        {screen === "confirm" && <ConfirmScreen onHome={() => setScreen("privacy")} activeTask={activeTask} onTaskComplete={handleTaskComplete} />}
       </div>
     </>
   );
