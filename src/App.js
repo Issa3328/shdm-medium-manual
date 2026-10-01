@@ -61,6 +61,94 @@ const TASKS = [
     desc:"Review the order summary based on the offer you selected. When you are ready, confirm your order to place it." },
 ];
 
+/* ---- SHDM study UI: task prompt, mobile layout, completion message ---- */
+if (typeof document !== "undefined" && !document.getElementById("shdm-ux")) {
+  const st = document.createElement("style");
+  st.id = "shdm-ux";
+  st.textContent = `
+.shdm-taskbar { background:#1e1b4b; color:#e0e7ff; }
+.shdm-tb-inner { display:flex; align-items:flex-start; gap:16px; padding:18px 260px 18px 24px; }
+.shdm-tb-num { width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(99,102,241,0.25); border:1.5px solid rgba(99,102,241,0.6); font-size:17px; font-weight:700; color:#c7d2fe; }
+.shdm-tb-body { flex:1; min-width:0; max-width:820px; }
+.shdm-tb-head { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#a5b4fc; margin:0 0 4px; }
+.shdm-tb-title { font-size:20px; font-weight:600; line-height:1.3; color:#ffffff; margin:0 0 8px; }
+.shdm-tb-lines { margin:0; padding:0 0 0 20px; list-style:disc; font-size:16px; line-height:1.55; color:#e0e7ff; }
+.shdm-tb-lines li { margin:0 0 4px; }
+.shdm-tb-progress { height:4px; background:rgba(255,255,255,0.08); }
+.shdm-tb-progress > div { height:100%; background:linear-gradient(90deg,#6366f1,#818cf8); transition:width .4s ease; }
+.shdm-badge { position:fixed; top:12px; right:12px; z-index:50; }
+.shdm-main { min-width:0; }
+.shdm-done { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:24px;
+  background:rgba(17,24,39,0.72); }
+.shdm-done-card { width:100%; max-width:600px; background:#fff; border-radius:16px; padding:44px 40px; text-align:center;
+  box-shadow:0 25px 50px -12px rgba(0,0,0,0.45); }
+.shdm-done-check { width:84px; height:84px; border-radius:50%; background:#16a34a; color:#fff; display:flex; align-items:center;
+  justify-content:center; margin:0 auto 24px; }
+.shdm-done-title { font-size:32px; line-height:1.2; font-weight:700; color:#111827; margin:0 0 16px; }
+.shdm-done-text { font-size:21px; line-height:1.5; color:#1f2937; margin:0 0 12px; }
+.shdm-done-hint { font-size:16px; line-height:1.5; color:#6b7280; margin:0; }
+@media (max-width: 767px) {
+  .shdm-root { flex-direction:column !important; }
+  .shdm-sidebar { display:none !important; }
+  .shdm-badge { position:static; order:-1; display:flex; justify-content:flex-end; padding:8px 12px; background:#fff; border-bottom:1px solid #e5e7eb; }
+  .shdm-tb-inner { gap:12px; padding:14px 16px; }
+  .shdm-tb-num { width:32px; height:32px; font-size:15px; }
+  .shdm-tb-head { font-size:12px; }
+  .shdm-tb-title { font-size:18px; margin-bottom:6px; }
+  .shdm-tb-lines { font-size:15px; line-height:1.5; padding-left:18px; }
+  .shdm-cat-head { flex-wrap:wrap; row-gap:10px; }
+  .shdm-cat-head > :first-child { flex-basis:100%; min-width:0; }
+  .shdm-cat-actions { margin-left:auto !important; flex-direction:row !important; align-items:center !important; gap:8px !important; }
+  .shdm-cat-name { flex-wrap:wrap; }
+  .shdm-done-card { padding:32px 22px; }
+  .shdm-done-check { width:68px; height:68px; margin-bottom:18px; }
+  .shdm-done-title { font-size:26px; }
+  .shdm-done-text { font-size:19px; }
+}
+`;
+  document.head.appendChild(st);
+}
+
+function StudyTaskBar({ sidebarVisible, currentTask }) {
+  if (!sidebarVisible || currentTask >= TASKS.length) return null;
+  const t = TASKS[currentTask];
+  const lines = (t.desc.match(/[^.]+\.?/g) || [t.desc]).map(s => s.trim()).filter(Boolean);
+  return (
+    <div className="shdm-taskbar" role="region" aria-label="Current task">
+      <div className="shdm-tb-inner">
+        <div className="shdm-tb-num">{currentTask + 1}</div>
+        <div className="shdm-tb-body">
+          <p className="shdm-tb-head">{t.label} of {TASKS.length}</p>
+          <p className="shdm-tb-title">{t.short}</p>
+          <ul className="shdm-tb-lines">
+            {lines.map((l, i) => <li key={i}>{l}</li>)}
+          </ul>
+        </div>
+      </div>
+      <div className="shdm-tb-progress"><div style={{ width: `${((currentTask + 1) / TASKS.length) * 100}%` }} /></div>
+    </div>
+  );
+}
+
+function StudyDoneOverlay() {
+  return (
+    <div className="shdm-done" role="dialog" aria-modal="true" aria-labelledby="shdm-done-title">
+      <div className="shdm-done-card">
+        <div className="shdm-done-check">
+          <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h1 id="shdm-done-title" className="shdm-done-title">All tasks completed. Thank you!</h1>
+        <p className="shdm-done-text">Please go back to the survey to answer the remaining questions.</p>
+        <p className="shdm-done-hint">You can close this page now.</p>
+      </div>
+    </div>
+  );
+}
+
+
 function studyLog(payload) {
   try {
     fetch(`${SUPABASE_URL}/rest/v1/rpc/study_log`, {
@@ -325,7 +413,7 @@ export default function App() {
   };
 
   const ModeBadge = () => (
-    <div className="fixed top-3 right-3 z-50">
+    <div className="shdm-badge">
       <span className="text-xs px-2.5 py-1 rounded-full border font-medium shadow-sm bg-blue-50 text-blue-700 border-blue-200">
         {MODE_LABEL}
       </span>
@@ -333,7 +421,7 @@ export default function App() {
   );
 
   const Sidebar = () => (
-    <div style={{ width:220, flexShrink:0, background:"#fff", borderRight:"1px solid #e5e7eb",
+    <div className="shdm-sidebar" style={{ width:220, flexShrink:0, background:"#fff", borderRight:"1px solid #e5e7eb",
       padding:"20px 0", position:"sticky", top:0, height:"100vh", overflowY:"auto" }}>
       <p style={{ fontSize:11, fontWeight:600, letterSpacing:".06em", textTransform:"uppercase",
         color:"#6b7280", padding:"0 16px 12px" }}>Your Tasks</p>
@@ -367,47 +455,14 @@ export default function App() {
     </div>
   );
 
-  const TaskBar = () => {
-    if (!sidebarVisible || currentTask >= TASKS.length) return null;
-    const t = TASKS[currentTask];
-    const progress = ((currentTask + 1) / TASKS.length) * 100;
-    return (
-      <div style={{ background:"#1e1b4b", borderBottom:"1px solid rgba(99,102,241,0.25)" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 20px" }}>
-          <div style={{
-            width:32, height:32, borderRadius:"50%", flexShrink:0,
-            background:"rgba(99,102,241,0.25)", border:"1.5px solid rgba(99,102,241,0.6)",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:13, fontWeight:700, color:"#a5b4fc",
-          }}>
-            {currentTask + 1}
-          </div>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase",
-              letterSpacing:".09em", color:"#818cf8", marginBottom:4 }}>
-              {t.label} &nbsp;·&nbsp; {currentTask + 1} of {TASKS.length}
-            </div>
-            <div style={{ fontSize:13, color:"#c7d2fe", lineHeight:1.55 }}>
-              {t.desc}
-            </div>
-          </div>
-        </div>
-        <div style={{ height:3, background:"rgba(255,255,255,0.07)" }}>
-          <div style={{
-            height:"100%", width:`${progress}%`,
-            background:"linear-gradient(90deg,#6366f1,#818cf8)",
-            transition:"width 0.4s ease",
-          }} />
-        </div>
-      </div>
-    );
-  };
+  const TaskBar = () => <StudyTaskBar sidebarVisible={sidebarVisible} currentTask={currentTask} />;
 
   if (stage === "complete") {
     return (
-      <div style={{ display:"flex", minHeight:"100vh" }}>
+      <div className="shdm-root" style={{ display:"flex", minHeight:"100vh" }}>
+        <StudyDoneOverlay />
         {sidebarVisible && <Sidebar />}
-        <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
+        <div className="shdm-main" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
           <TaskBar />
           <ModeBadge />
           <div className="min-h-screen flex items-center justify-center p-4 bg-green-50">
@@ -447,9 +502,9 @@ export default function App() {
 
   if (stage === "analyzing") {
     return (
-      <div style={{ display:"flex", minHeight:"100vh" }}>
+      <div className="shdm-root" style={{ display:"flex", minHeight:"100vh" }}>
         {sidebarVisible && <Sidebar />}
-        <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
+        <div className="shdm-main" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
           <TaskBar />
           <ModeBadge />
           <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -484,9 +539,9 @@ export default function App() {
     : selectedOffer.category === "Home" ? { deliveryLabel:"Service Type",  deliveryValue:"One-time setup",    timeLabel:"Same day",      timeSub:"Installation included" }
     :                                     { deliveryLabel:"Session Type",  deliveryValue:"Virtual session",   timeLabel:"Flexible",      timeSub:"Schedule anytime" };
     return (
-      <div style={{ display:"flex", minHeight:"100vh" }}>
+      <div className="shdm-root" style={{ display:"flex", minHeight:"100vh" }}>
         {sidebarVisible && <Sidebar />}
-        <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
+        <div className="shdm-main" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
           <TaskBar />
           <ModeBadge />
           <div className="min-h-screen bg-gray-100 p-4">
@@ -544,9 +599,9 @@ export default function App() {
     const filtered = ALL_OFFERS.filter(o => o.category === activeCategory);
 
     return (
-      <div style={{ display:"flex", minHeight:"100vh" }}>
+      <div className="shdm-root" style={{ display:"flex", minHeight:"100vh" }}>
         {sidebarVisible && <Sidebar />}
-        <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
+        <div className="shdm-main" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
           <TaskBar />
           <ModeBadge />
           <div className="min-h-screen p-4 bg-gray-100">
@@ -625,9 +680,9 @@ export default function App() {
     const onApply  = isAcqTab ? applyAcq : applyProc;
 
     return (
-      <div style={{ display:"flex", minHeight:"100vh" }}>
+      <div className="shdm-root" style={{ display:"flex", minHeight:"100vh" }}>
         {sidebarVisible && <Sidebar />}
-        <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
+        <div className="shdm-main" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
           <TaskBar />
           <ModeBadge />
           <div className="min-h-screen bg-gray-100 p-4 pt-8">
@@ -741,9 +796,9 @@ export default function App() {
   }
 
   return (
-    <div style={{ display:"flex", minHeight:"100vh" }}>
+    <div className="shdm-root" style={{ display:"flex", minHeight:"100vh" }}>
       {sidebarVisible && <Sidebar />}
-      <div style={{ flex:1, display:"flex", flexDirection:"column" }}>
+      <div className="shdm-main" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
         <TaskBar />
         <ModeBadge />
         <div className="min-h-screen p-4 bg-gray-100">
